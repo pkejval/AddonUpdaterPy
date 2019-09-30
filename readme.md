@@ -29,8 +29,11 @@ https://www.tukui.org/addons.php?id=38
 ```
 
 ## Startup
-You can run console application directly from executable in "interactive mode". Progress will be output to console window. Updater stops when finished and shows summary about installed/updated/error numbers and waits for user interaction.
-If you want to run application from script (Task Scheduler), just run it with **--script** or **-s** parameter.
+You can run application directly from executable in "console interactive mode". Progress will be output to console window. Updater stops when finished and shows summary about installed/updated/error addons and waits for user interaction.
+
+### Automatic update
+Best usage scenario of this app is run it automatically from Windows Task Scheduler on every computer startup or user login.
+If you want to run application from script or Task Scheduler, just run it with **--script** or **-s** parameter. It will automatically close AddonUpdater window after work is done.
 
 ## Limitations
 * You can update addons in only one World of Warcraft installation at once. If you need update more, you need copy AddonUpdaterPy to separate folder and set its own "config.txt" file.
@@ -43,10 +46,8 @@ If you want to contribute either by finding and reporting Issues or you came jus
 Create new file in AddonSites folder and create new class which inherits from AddonSite base class (interface) and implement three methods:
 
 1. GetURL - You can transform URL provided from "config.txt". Function must return URL in string format. AddonUpdater will use it for fetch addon website.
-2. LookupNewVersion - This function gets "html" variable which is BeautifulSoup parsed page. You can use BeautifulSoup methods on HTML data in "html" variable and parse infromation from it. Essential information is:
+2. LookupNewVersion - This function gets "html" variable which is instance of BeautifulSoup with loaded HTML response from addon site. You can use BeautifulSoup methods on HTML data in "html" variable and parse information from it. You have to set these variables for updater to work:
     self.name - Addon name
     self.available_version - Newest version found at addon website
     self.download_url - URL for download newest version of addon
-3. HandleURLs - Must return list of strings (hostnames) which module can handle
-
-Register your new class in "AddonSites/__init__.py" list called "__all__" to make main script load your class module
+3. HandleURLs - Must return list of strings (hostnames) which module can handle (**without** 'http://' or 'https://' part)

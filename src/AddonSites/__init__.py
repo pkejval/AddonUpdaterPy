@@ -1,1 +1,5 @@
-__all__ = ["IAddonSite", "Curse", "TukUI", "WoWAce", "WoWInterface"]
+from os.path import dirname, basename, isfile, join
+import glob
+modules = glob.glob(join(dirname(__file__), "*.py"))
+# import all "modules" from this folder
+__all__ = [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]
