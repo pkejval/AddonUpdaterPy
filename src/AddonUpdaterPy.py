@@ -1,4 +1,4 @@
-import os, sys, requests, re, json
+import os, sys, requests, re, json, getopt
 from urllib.parse import urlparse
 from AddonSites.IAddonSite import AddonSite
 from AddonSites import *
@@ -58,6 +58,7 @@ def main():
     global addons
     global interactive
     global installed_addons
+    global MULTIPROCESS
 
     print("---------------------")
     print("| WoW Addon updater |")
@@ -65,8 +66,17 @@ def main():
     print("---------------------\n")
 
     # parse input arguments
-    if len(sys.argv) > 1 and (sys.argv[1] == "--script" or sys.argv[1] == "-s"): 
-         interactive = False
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "s", ["script", "singlethread"])
+    except Exception as e:
+        print(str(e))
+        myexit(2)
+
+    for opt, arg in opts:
+        if opt in ("-s", "--script"):
+            interactive = False
+        elif opt  == "--singlethread":
+            MULTIPROCESS = False
 
     # check if internet connection is available before updating
     if not internet_on():
@@ -104,7 +114,8 @@ def main():
     return_dict = manager.dict()
     i = 0
     for addon in addons:
-        addon.installed_version = installed_addons.get(addon.url, "")
+        if installed_addons:
+            addon.installed_version = installed_addons.get(addon.url, "")
         if MULTIPROCESS:
             pool.append(mp.Process(target=worker, args=(i,addon,return_dict)))
             i+=1
@@ -121,7 +132,15 @@ def main():
         for p in pool:
             p.join()
 
-    addons = return_dict.values()
+    if MULTIPROCESS:
+        addons = return_dict.values()
+    
+    # Cleanup temp files
+    for addon in addons:
+        try:
+            addon.RemoveTempFile()
+        except: pass
+
     save_addon_status()
 
 def read_config(path):
@@ -184,8 +203,6 @@ def read_installed_addons():
         print(SAVEFILE_PATH + " not found")
         return
     
-    print("Reading " + SAVEFILE_PATH)
-
     with open(SAVEFILE_PATH, 'r') as infile:
         installed_addons = json.load(infile)
 

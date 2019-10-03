@@ -57,6 +57,9 @@ class AddonSite(ABC):
         else: print("[UPDATED] " + self.name)
         self.installed_version = self.available_version
 
+    def RemoveTempFile(self):
+        os.remove(self.tempfile)
+
     def Update(self):
         try:
             self.LookupNewVersion(self.GetHTMLPage())
