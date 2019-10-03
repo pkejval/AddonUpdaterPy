@@ -45,9 +45,9 @@ If you want to contribute either by finding and reporting Issues or you came jus
 ### How to add support for another addon site
 Create new file in AddonSites folder and create new class which inherits from AddonSite base class (interface) and implement three methods:
 
-1. GetURL - You can transform URL provided from "config.txt". Function must return URL in string format. AddonUpdater will use it for fetch addon website.
-2. LookupNewVersion - This function gets "html" variable which is instance of BeautifulSoup with loaded HTML response from addon site. You can use BeautifulSoup methods on HTML data in "html" variable and parse information from it. You have to set these variables for updater to work:
-    self.name - Addon name
-    self.available_version - Newest version found at addon website
-    self.download_url - URL for download newest version of addon
-3. HandleURLs - Must return list of strings (hostnames) which module can handle (**without** 'http://' or 'https://' part)
+1. **GetURL** - You can transform URL provided from "config.txt". Function must return URL in string format. AddonUpdater will use it for fetch addon website.
+2. **LookupNewVersion** - This function gets "html" variable which is instance of BeautifulSoup with loaded HTML response from addon site. You can use BeautifulSoup methods on HTML data in "html" variable and parse information from it. You have to set these variables for updater to work:
+    * **self.name** - Addon name
+    * **self.available_version** - Newest version found at addon website
+    * **self.download_url** - URL for download newest version of addon
+3. **HandleURLs** - Must return list of strings (hostnames) which module can handle (**without** 'http://' or 'https://' part)
