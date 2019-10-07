@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-import cfscrape, tempfile, zipfile, os, random, string
+import cfscrape, tempfile, zipfile, os, random, string, re, shutil
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 
@@ -18,7 +18,12 @@ class AddonSite(ABC):
         self.wow_version = wow_version
         self.tempfile = ""
         self.scraper = cfscrape.create_scraper()
+        self.new_folders = []
+        self.old_folders = []
     
+    def GetAddonsFolderPath(self):
+        return os.path.join(self.wow_path, "_" + self.wow_version + "_", "Interface", "Addons")
+
     def __str__(self):
         if self.name != "": return self.name
         else: return self.url
@@ -51,7 +56,22 @@ class AddonSite(ABC):
     def UnzipFile(self):
         if not os.path.exists(self.tempfile): raise Exception
         with zipfile.ZipFile(self.tempfile, 'r') as zip:
-            zip.extractall(os.path.join(self.wow_path, "_" + self.wow_version + "_", "Interface", "Addons"))
+           
+            # delete old folders
+            for folder in self.old_folders:
+                shutil.rmtree(os.path.join(self.GetAddonsFolderPath(), folder), ignore_errors=True)
+                while os.path.exists(os.path.join(self.GetAddonsFolderPath(), folder)): pass
+
+            # search for top level folders in zip file
+            regex = re.compile("(.*?)\/")
+            for name in zip.namelist():
+                match = regex.match(name)
+                if match:
+                    folder = match.group(1)
+                    if not folder in self.new_folders: self.new_folders.append(folder) 
+            
+            # extract zip into game folder
+            zip.extractall(self.GetAddonsFolderPath())
         
         if self.installed_version == "": print("[INSTALLED] " + self.name)
         else: print("[UPDATED] " + self.name)

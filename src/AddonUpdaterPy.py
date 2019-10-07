@@ -1,4 +1,4 @@
-import os, sys, requests, re, json, getopt
+import os, sys, requests, re, json, getopt, shutil
 from urllib.parse import urlparse
 from AddonSites.IAddonSite import AddonSite
 from AddonSites import *
@@ -115,7 +115,11 @@ def main():
     i = 0
     for addon in addons:
         if installed_addons:
-            addon.installed_version = installed_addons.get(addon.url, "")
+            if addon.url in installed_addons:
+                data = installed_addons[addon.url]
+                if "folders" in data: addon.old_folders = data["folders"]
+                if "installed_version" in data: addon.installed_version = data["installed_version"]
+
         if MULTIPROCESS:
             pool.append(mp.Process(target=worker, args=(i,addon,return_dict)))
             i+=1
@@ -132,14 +136,22 @@ def main():
         for p in pool:
             p.join()
 
-    if MULTIPROCESS:
         addons = return_dict.values()
     
-    # Cleanup temp files
+    # cleanup temp files
     for addon in addons:
         try:
             addon.RemoveTempFile()
         except: pass
+
+    # remove folders of addons that were installed but already not present in config.txt
+    if installed_addons:
+        uninstall = [item for item in installed_addons if item not in [a.url for a in addons]]
+        for u in uninstall:
+            for folder in installed_addons[u]["folders"]:
+                shutil.rmtree(os.path.join(WOW_INTERFACE_PATH, folder), ignore_errors=True)
+                while os.path.exists(os.path.join(WOW_INTERFACE_PATH, folder)): pass
+            print("[UNINSTALLED] - " + u)
 
     save_addon_status()
 
@@ -190,7 +202,10 @@ def save_addon_status():
     save = {}
     for addon in addons:
         if addon.installed_version != "":
-            save[addon.url] = addon.installed_version #.append({"url": addon.url, "ver": addon.installed_version})
+            save[addon.url] = {
+                "installed_version" : addon.installed_version,
+                "folders": addon.new_folders
+                }
     
     with open(SAVEFILE_PATH, 'w') as outfile:
         json.dump(save, outfile)
