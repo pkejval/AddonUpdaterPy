@@ -31,7 +31,11 @@ https://www.tukui.org/addons.php?id=38
 ## Startup
 You can run application directly from executable in "console interactive mode". Progress will be output to console window. Updater stops when finished and shows summary about installed/updated/error addons and waits for user interaction.
 
-### Automatic update
+### Automatic AddonUpdaterPy update
+Application checks for new version at github release page. If newer version found it will update automatically.
+Automatic update can be disabled by running with **-noupdate** or **-n** parameter.
+
+### Automatic addons update
 Best usage scenario of this app is run it automatically from Windows Task Scheduler on every computer startup or user login.
 If you want to run application from script or Task Scheduler, just run it with **--script** or **-s** parameter. It will automatically close AddonUpdater window after work is done.
 
@@ -51,3 +55,9 @@ Create new file in AddonSites folder and create new class which inherits from Ad
     * **self.available_version** - Newest version found at addon website
     * **self.download_url** - URL for download newest version of addon
 3. **HandleURLs** - Must return list of strings (hostnames) which module can handle (**without** 'http://' or 'https://' part)
+
+### How to compile into .exe binary
+Use [auto-py-to-exe](https://pypi.org/project/auto-py-to-exe/) with parameters
+```
+pyinstaller -y -F --add-data "<path_to_AddonUpdaterPy>/src/AddonSites";"AddonSites/" "<path_to_AddonUpdaterPy>/src/AddonUpdaterPy.py"
+```

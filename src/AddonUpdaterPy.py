@@ -1,10 +1,13 @@
-import os, sys, requests, re, json, getopt, shutil
+import os, sys, requests, re, json, getopt, shutil, tempfile, win32api, subprocess
 from urllib.parse import urlparse
 from AddonSites.IAddonSite import AddonSite
 from AddonSites import *
 import multiprocessing as mp
-from urllib.request import urlopen
+from urllib.request import urlopen, urlretrieve
 from urllib.error import URLError
+
+# set this variable to tag new release for autoupdating
+APP_VERSION=0.5
 
 # set this variable to False only for debugging purposes
 MULTIPROCESS = True
@@ -16,11 +19,38 @@ SAVEFILE_PATH = ""
 addons = []
 installed_addons = {}
 
+DEBUG = False
 interactive = True
 
 addon_sites = []
 for site in AddonSite.__subclasses__():
     addon_sites.append(site("","", ""))
+
+def check_update(this_path):
+    """ Checks github release. If newer version found (by tag), download and update itself """
+    try:
+        version_regex= re.compile("\/tag\/(.*)")
+        html = urlopen("https://github.com/pkejval/AddonUpdaterPy/releases/latest")
+        version = float(version_regex.search(html.url).group(1))
+
+        if (version > APP_VERSION):
+            print("New version '" + str(version) + "' is available! Starting update...")
+            temp = os.path.join(tempfile.gettempdir(), "AddonUpdaterPy.exe")
+            print("Downloading update...")
+            urlretrieve("https://github.com/pkejval/AddonUpdaterPy/releases/download/" + str(version) + "/AddonUpdaterPy.exe", temp)           
+            subprocess.Popen([temp, '--update=' + this_path], shell=True)
+            sys.exit(0)
+
+    except Exception as e: print("Check update: " + str(e)); myexit(1)
+
+def do_update(this_path, path):
+    """Copy current running script file into path to update binary and starts it """
+    try:
+        print("Copying " + this_path + " into " + path)
+        shutil.copyfile(this_path, path)
+        subprocess.Popen(path, shell=True)
+        sys.exit(0)
+    except Exception as e: print("do_update: " + str(e)); myexit(1)
 
 def internet_on():
     """Checks for internet connection by opening
@@ -59,15 +89,20 @@ def main():
     global interactive
     global installed_addons
     global MULTIPROCESS
+    global DEBUG
+    can_update = True
 
     print("---------------------")
     print("| WoW Addon updater |")
     print("|     by Bugsa      |")
     print("---------------------\n")
+    print("Version " + str(APP_VERSION))
+
+    this_path = win32api.GetLongPathName(sys.argv[0]) if '~' in sys.argv[0] else sys.argv[0]
 
     # parse input arguments
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "s", ["script", "singlethread"])
+        opts, args = getopt.getopt(sys.argv[1:], "siu:dn", ["script", "singlethread", "update=", "debug", "noupdate"])
     except Exception as e:
         print(str(e))
         myexit(2)
@@ -75,13 +110,22 @@ def main():
     for opt, arg in opts:
         if opt in ("-s", "--script"):
             interactive = False
-        elif opt  == "--singlethread":
+        elif opt in ("-i", "--singlethread"):
             MULTIPROCESS = False
+        elif opt in ("u", "--update"):
+            do_update(this_path, arg)
+            sys.exit(0)
+        elif opt in ("d", "--debug"):
+            DEBUG = True
+        elif opt in ("n", "--noupdate"):
+            can_update = False
 
     # check if internet connection is available before updating
-    if not internet_on():
+    if not DEBUG and not internet_on():
         print("Internet connection isn't available!")
         myexit(3)
+
+    if not DEBUG and can_update: check_update(this_path);
 
     # exit when config.txt file isn't present and create example file
     if not os.path.exists("config.txt"):
@@ -214,12 +258,15 @@ def read_installed_addons():
     """Read and returns dictionary {URL, VERSION} of installed addons from JSON savefile
     """
     installed_addons = {}
+    
     if not os.path.exists(SAVEFILE_PATH): 
         print(SAVEFILE_PATH + " not found")
-        return
+        return installed_addons
     
-    with open(SAVEFILE_PATH, 'r') as infile:
-        installed_addons = json.load(infile)
+    try:
+        with open(SAVEFILE_PATH, 'r') as infile:
+            installed_addons = json.load(infile)
+    except: pass
 
     print("Found " + str(len(installed_addons)) + " installed addons")
     return installed_addons
