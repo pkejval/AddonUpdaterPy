@@ -193,7 +193,7 @@ def main():
         uninstall = [item for item in installed_addons if item not in [a.url for a in addons]]
         for u in uninstall:
             for folder in installed_addons[u]["folders"]:
-                shutil.rmtree(os.path.join(WOW_INTERFACE_PATH, folder), ignore_errors=True)
+                shutil.rmtree(os.path.join(WOW_INTERFACE_PATH, folder), ignore_errors=False)
                 while os.path.exists(os.path.join(WOW_INTERFACE_PATH, folder)): pass
             print("[UNINSTALLED] - " + u)
 
@@ -211,30 +211,38 @@ def read_config(path):
 
     print("Reading config.txt")
 
-    path_regex = re.compile("wow_path=", re.I)
-    version_regex = re.compile("wow_version=", re.I)
+    path_regex = re.compile("wow_path=(.*)", re.I)
+    version_regex = re.compile("wow_version=(.*)", re.I)
     http_regex = re.compile("http://|https://", re.I)
     with open(path, 'r') as config:
         for line in config:
             line = line.strip()
             # skip comment line
             if line.startswith("#") or line == "": continue
-            # parse WOW_PATH
-            elif path_regex.match(line):
-                WOW_PATH = line.strip().split("=")[1]
-            # parse WOW_VERSION, should be retail or classic
-            elif version_regex.match(line):
-                WOW_VERSION = line.strip().split("=")[1].lower()
-                if WOW_VERSION != "retail" or WOW_VERSION != 'classic': WOW_VERSION = "retail"
-            # parse addon site URL
-            elif http_regex.match(line):
-                addon = create_addon_instance(line)
+            
+            # search addon URL
+            http_match = http_regex.match(line)
+            if http_match:
+                addon = create_addon_instance(http_match.string)
                 if addon:
                     # add only if URL isn't duplicate
                     if not any(x for x in addons if x.url == addon.url): addons.append(addon)
-            else:
-                print("Bad config.txt line: '" + line + "'\n")
-                
+                continue
+            
+            # parse WOW_PATH
+            path_match = path_regex.match(line)
+            if path_match:
+                WOW_PATH = path_match.groups(1)[0]
+                continue
+            
+            # parse WOW_VERSION, should be retail or classic
+            version_match = version_regex.match(line)
+            if version_match:
+                WOW_VERSION = version_match.groups(1)[0]
+                if WOW_VERSION != "retail" or WOW_VERSION != 'classic': WOW_VERSION = "retail"
+                continue
+
+            print("Bad config.txt line: '" + line + "'\n")
 
     WOW_INTERFACE_PATH = os.path.join(WOW_PATH, "_" + WOW_VERSION + "_", "Interface", "Addons")
     SAVEFILE_PATH = os.path.join(WOW_INTERFACE_PATH, "AddonUpdater.json")
