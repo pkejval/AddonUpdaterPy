@@ -7,7 +7,7 @@ from urllib.request import urlopen, urlretrieve
 from urllib.error import URLError
 
 # set this variable to tag new release for autoupdating
-APP_VERSION=0.5
+APP_VERSION=0.6
 
 # set this variable to False only for debugging purposes
 MULTIPROCESS = True
@@ -221,28 +221,22 @@ def read_config(path):
             if line.startswith("#") or line == "": continue
             
             # search addon URL
-            http_match = http_regex.match(line)
-            if http_match:
-                addon = create_addon_instance(http_match.string)
+            elif match := http_regex.match(line):
+                addon = create_addon_instance(match.string)
                 if addon:
                     # add only if URL isn't duplicate
                     if not any(x for x in addons if x.url == addon.url): addons.append(addon)
-                continue
             
             # parse WOW_PATH
-            path_match = path_regex.match(line)
-            if path_match:
-                WOW_PATH = path_match.groups(1)[0]
-                continue
+            elif match := path_regex.match(line):
+                WOW_PATH = match.groups(1)[0]
             
             # parse WOW_VERSION, should be retail or classic
-            version_match = version_regex.match(line)
-            if version_match:
-                WOW_VERSION = version_match.groups(1)[0]
+            elif match := version_regex.match(line):
+                WOW_VERSION = match.groups(1)[0]
                 if WOW_VERSION != "retail" or WOW_VERSION != 'classic': WOW_VERSION = "retail"
-                continue
 
-            print("Bad config.txt line: '" + line + "'\n")
+            else: print("Bad config.txt line: '" + line + "'\n")
 
     WOW_INTERFACE_PATH = os.path.join(WOW_PATH, "_" + WOW_VERSION + "_", "Interface", "Addons")
     SAVEFILE_PATH = os.path.join(WOW_INTERFACE_PATH, "AddonUpdater.json")
